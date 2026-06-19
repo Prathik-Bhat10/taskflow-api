@@ -6,24 +6,21 @@ A RESTful API for task management with the following features:
 - Task filtering by status and priority
 - Task statistics
 - Validation and error handling
-- SQLite database integration
+- SQLite database integration with SQLModel
 """
 from contextlib import asynccontextmanager
-
 from fastapi import FastAPI
 
 from app.routers import tasks_router
 from app.core.config import settings
-from app.db.database import db
+from app.db.database import create_db_and_tables
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Connect to the database on startup and close it on shutdown."""
-    db.connect()
-    db.create_table()
+    """Create database tables on startup."""
+    create_db_and_tables()
     yield
-    db.close()
 
 
 # Create FastAPI application instance

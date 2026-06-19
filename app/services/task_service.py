@@ -4,22 +4,23 @@ This layer handles all task-related operations and acts as an intermediary
 between the routers and the database.
 """
 from typing import List, Optional
-from app.db.database import Database
+from sqlmodel import Session, select
 from app.models.task import Task
 from app.schemas.task import TaskCreate, TaskUpdate, TaskResponse
+from datetime import datetime
 
 
 class TaskService:
     """Service class for task operations."""
 
-    def __init__(self, db: Database):
+    def __init__(self, session: Session):
         """
-        Initialize TaskService with a database instance.
+        Initialize TaskService with a database session.
 
         Args:
-            db: Database instance
+            session: SQLAlchemy Session instance
         """
-        self.db = db
+        self.session = session
 
     def create_task(self, task_create: TaskCreate) -> TaskResponse:
         """
@@ -33,19 +34,22 @@ class TaskService:
         """
         tags_str = ",".join(task_create.tags) if task_create.tags else None
 
-        task_id = self.db.add_task(
+        task = Task(
             title=task_create.title,
             description=task_create.description,
             status=task_create.status.value,
             priority=task_create.priority.value,
             due_date=task_create.due_date.isoformat() if task_create.due_date else None,
             tags=tags_str,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
         )
 
-        task = self.get_task(task_id)
-        if task is None:
-            raise RuntimeError(f"Failed to retrieve created task with id {task_id}")
-        return task
+        self.session.add(task)
+        self.session.commit()
+        self.session.refresh(task)
+
+        return TaskResponse(**task.to_dict())
 
     def get_task(self, task_id: int) -> Optional[TaskResponse]:
         """
@@ -57,11 +61,10 @@ class TaskService:
         Returns:
             TaskResponse if found, None otherwise
         """
-        task_row = self.db.get_task(task_id)
-        if not task_row:
+        task = self.session.get(Task, task_id)
+        if not task:
             return None
 
-        task = Task.from_db_row(task_row)
         return TaskResponse(**task.to_dict())
 
     def get_all_tasks(
@@ -83,12 +86,17 @@ class TaskService:
         Returns:
             List of TaskResponse objects
         """
-        tasks_rows = self.db.get_tasks(status=status, priority=priority)
+        query = select(Task)
 
-        tasks = [Task.from_db_row(row).to_dict() for row in tasks_rows]
-        paginated = tasks[skip : skip + limit]
+        if status:
+            query = query.where(Task.status == status)
+        if priority:
+            query = query.where(Task.priority == priority)
 
-        return [TaskResponse(**task) for task in paginated]
+        query = query.offset(skip).limit(limit)
+        tasks = self.session.exec(query).all()
+
+        return [TaskResponse(**task.to_dict()) for task in tasks]
 
     def update_task(self, task_id: int, task_update: TaskUpdate) -> Optional[TaskResponse]:
         """
@@ -101,30 +109,29 @@ class TaskService:
         Returns:
             Updated TaskResponse if successful, None if task not found
         """
-        # Build update dictionary with only set fields
-        update_data = {}
-
-        if task_update.title is not None:
-            update_data["title"] = task_update.title
-        if task_update.description is not None:
-            update_data["description"] = task_update.description
-        if task_update.status is not None:
-            update_data["status"] = task_update.status.value
-        if task_update.priority is not None:
-            update_data["priority"] = task_update.priority.value
-        if task_update.due_date is not None:
-            update_data["due_date"] = task_update.due_date.isoformat()
-        if task_update.tags is not None:
-            update_data["tags"] = ",".join(task_update.tags)
-
-        if not update_data:
-            return self.get_task(task_id)
-
-        updated = self.db.update_task(task_id, **update_data)
-        if not updated:
+        task = self.session.get(Task, task_id)
+        if not task:
             return None
 
-        return self.get_task(task_id)
+        if task_update.title is not None:
+            task.title = task_update.title
+        if task_update.description is not None:
+            task.description = task_update.description
+        if task_update.status is not None:
+            task.status = task_update.status.value
+        if task_update.priority is not None:
+            task.priority = task_update.priority.value
+        if task_update.due_date is not None:
+            task.due_date = task_update.due_date.isoformat()
+        if task_update.tags is not None:
+            task.tags = ",".join(task_update.tags)
+
+        task.updated_at = datetime.utcnow()
+        self.session.add(task)
+        self.session.commit()
+        self.session.refresh(task)
+
+        return TaskResponse(**task.to_dict())
 
     def delete_task(self, task_id: int) -> bool:
         """
@@ -136,7 +143,13 @@ class TaskService:
         Returns:
             True if deleted, False if not found
         """
-        return self.db.delete_task(task_id)
+        task = self.session.get(Task, task_id)
+        if not task:
+            return False
+
+        self.session.delete(task)
+        self.session.commit()
+        return True
 
     def get_task_stats(self) -> dict:
         """
@@ -145,7 +158,7 @@ class TaskService:
         Returns:
             Dictionary with task counts by status
         """
-        all_tasks = self.db.get_tasks()
+        all_tasks = self.session.exec(select(Task)).all()
 
         stats = {
             "total": len(all_tasks),
@@ -155,7 +168,7 @@ class TaskService:
         }
 
         for task in all_tasks:
-            status = task[3]  # status is at index 3
+            status = task.status
             if status in stats:
                 stats[status] += 1
 

@@ -1,81 +1,24 @@
 """
-Task model for database representation.
-This is the ORM-like layer that represents database records.
+Task model for database representation using SQLModel.
+SQLModel combines SQLAlchemy ORM with Pydantic validation.
 """
+from sqlmodel import SQLModel, Field
 from typing import Optional
+from datetime import datetime
 
 
-class Task:
+class Task(SQLModel, table=True):
     """Task model representing a task record in the database."""
-
-    def __init__(
-        self,
-        id: int,
-        title: str,
-        description: Optional[str] = None,
-        status: str = "pending",
-        priority: str = "medium",
-        due_date: Optional[str] = None,
-        tags: Optional[str] = None,
-        created_at: Optional[str] = None,
-        updated_at: Optional[str] = None,
-    ):
-        self.id = id
-        self.title = title
-        self.description = description
-        self.status = status
-        self.priority = priority
-        self.due_date = due_date
-        self.tags = tags
-        self.created_at = created_at
-        self.updated_at = updated_at
-
-    @classmethod
-    def from_db_row(cls, row: tuple) -> "Task":
-        """
-        Create a Task instance from a database row.
-        Supports both legacy 7-column rows and current 9-column rows.
-        """
-        status = cls._normalize_status(row[3])
-        priority = cls._normalize_priority(row[4])
-
-        base_kwargs = {
-            "id": row[0],
-            "title": row[1],
-            "description": row[2],
-            "status": status,
-            "priority": priority,
-            "due_date": row[5],
-            "tags": row[6],
-        }
-
-        if len(row) == 7:
-            return cls(**base_kwargs)
-        if len(row) == 9:
-            return cls(
-                **base_kwargs,
-                created_at=row[7],
-                updated_at=row[8],
-            )
-        raise ValueError(f"Unsupported task row shape: {len(row)} columns")
-
-    @staticmethod
-    def _normalize_status(value: str) -> str:
-        if value is None:
-            return "pending"
-        normalized = value.strip().lower().replace(" ", "_")
-        if normalized == "completed":
-            return "done"
-        return normalized
-
-    @staticmethod
-    def _normalize_priority(value: str) -> str:
-        if value is None:
-            return "medium"
-        normalized = value.strip().lower()
-        if normalized not in {"low", "medium", "high"}:
-            return "medium"
-        return normalized
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    title: str = Field(index=True)
+    description: Optional[str] = None
+    status: str = Field(default="pending", index=True)
+    priority: str = Field(default="medium", index=True)
+    due_date: Optional[str] = None
+    tags: Optional[str] = None
+    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
     def to_dict(self) -> dict:
         """Convert Task instance to dictionary."""
