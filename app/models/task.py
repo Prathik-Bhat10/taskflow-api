@@ -36,29 +36,46 @@ class Task:
         Create a Task instance from a database row.
         Supports both legacy 7-column rows and current 9-column rows.
         """
+        status = cls._normalize_status(row[3])
+        priority = cls._normalize_priority(row[4])
+
+        base_kwargs = {
+            "id": row[0],
+            "title": row[1],
+            "description": row[2],
+            "status": status,
+            "priority": priority,
+            "due_date": row[5],
+            "tags": row[6],
+        }
+
         if len(row) == 7:
-            return cls(
-                id=row[0],
-                title=row[1],
-                description=row[2],
-                status=row[3],
-                priority=row[4],
-                due_date=row[5],
-                tags=row[6],
-            )
+            return cls(**base_kwargs)
         if len(row) == 9:
             return cls(
-                id=row[0],
-                title=row[1],
-                description=row[2],
-                status=row[3],
-                priority=row[4],
-                due_date=row[5],
-                tags=row[6],
+                **base_kwargs,
                 created_at=row[7],
                 updated_at=row[8],
             )
         raise ValueError(f"Unsupported task row shape: {len(row)} columns")
+
+    @staticmethod
+    def _normalize_status(value: str) -> str:
+        if value is None:
+            return "pending"
+        normalized = value.strip().lower().replace(" ", "_")
+        if normalized == "completed":
+            return "done"
+        return normalized
+
+    @staticmethod
+    def _normalize_priority(value: str) -> str:
+        if value is None:
+            return "medium"
+        normalized = value.strip().lower()
+        if normalized not in {"low", "medium", "high"}:
+            return "medium"
+        return normalized
 
     def to_dict(self) -> dict:
         """Convert Task instance to dictionary."""
