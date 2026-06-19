@@ -43,11 +43,22 @@ class Database:
             status TEXT NOT NULL DEFAULT 'pending',
             priority TEXT NOT NULL DEFAULT 'medium',
             due_date TEXT,
-            tags TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            tags TEXT
         )
         """)
+        self.connection.commit()
+
+        # Add optional columns for timestamp tracking if the table schema is older.
+        self.cursor.execute("PRAGMA table_info(tasks)")
+        columns = [row[1] for row in self.cursor.fetchall()]
+        if "created_at" not in columns:
+            self.cursor.execute(
+                "ALTER TABLE tasks ADD COLUMN created_at TIMESTAMP"
+            )
+        if "updated_at" not in columns:
+            self.cursor.execute(
+                "ALTER TABLE tasks ADD COLUMN updated_at TIMESTAMP"
+            )
         self.connection.commit()
 
     def add_task(self, title: str, description: Optional[str] = None,

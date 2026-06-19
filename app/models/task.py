@@ -34,19 +34,31 @@ class Task:
     def from_db_row(cls, row: tuple) -> "Task":
         """
         Create a Task instance from a database row.
-        Row format: (id, title, description, status, priority, due_date, tags, created_at, updated_at)
+        Supports both legacy 7-column rows and current 9-column rows.
         """
-        return cls(
-            id=row[0],
-            title=row[1],
-            description=row[2],
-            status=row[3],
-            priority=row[4],
-            due_date=row[5],
-            tags=row[6],
-            created_at=row[7],
-            updated_at=row[8],
-        )
+        if len(row) == 7:
+            return cls(
+                id=row[0],
+                title=row[1],
+                description=row[2],
+                status=row[3],
+                priority=row[4],
+                due_date=row[5],
+                tags=row[6],
+            )
+        if len(row) == 9:
+            return cls(
+                id=row[0],
+                title=row[1],
+                description=row[2],
+                status=row[3],
+                priority=row[4],
+                due_date=row[5],
+                tags=row[6],
+                created_at=row[7],
+                updated_at=row[8],
+            )
+        raise ValueError(f"Unsupported task row shape: {len(row)} columns")
 
     def to_dict(self) -> dict:
         """Convert Task instance to dictionary."""
