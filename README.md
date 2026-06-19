@@ -1,6 +1,11 @@
-# TaskFlow API - Complete Learning Project
+# ---
+# title: TaskFlow API
+# description: Reference implementation of a FastAPI task management API
+# ---
 
-A comprehensive, production-ready FastAPI application demonstrating best practices for building RESTful APIs. This project is structured to serve as an excellent learning resource for understanding modern Python web development patterns.
+# TaskFlow API
+
+A production-ready FastAPI application demonstrating best practices for building RESTful APIs. This project is structured as a reference implementation showcasing modern Python web development patterns.
 
 ## 📋 Project Overview
 
@@ -191,96 +196,40 @@ Get task statistics grouped by status.
 }
 ```
 
-## 🎓 Learning Points
+## Key Concepts
 
-### 1. **Layered Architecture**
-The project demonstrates the separation of concerns:
-- Routes handle HTTP
-- Services handle business logic
-- Database layer handles data persistence
+- **Layered Architecture:** Routes handle HTTP concerns; services contain business logic; database layer manages persistence.
+- **Pydantic Validation:** Models in `app/schemas/task.py` enforce input validation and serialization.
+- **Database Operations:** `app/db/database.py` provides connection management and parameterized SQL for CRUD.
+- **Service Layer Pattern:** `app/services/task_service.py` coordinates data flow between routes and the database.
+- **FastAPI Features:** Implemented in `app/main.py` and `app/routers/tasks.py` (dependencies, lifecycle, docs).
 
-### 2. **Pydantic Validation**
-See `app/schemas/task.py`:
-- Field validation with constraints
-- Custom validators using `@field_validator`
-- Cross-field validation using `@model_validator`
+### Quick Start Files
 
-### 3. **Database Operations**
-See `app/db/database.py`:
-- Connection management with context managers
-- CRUD operations (Create, Read, Update, Delete)
-- SQL parameterization to prevent injection
+- `app/main.py` — FastAPI application and lifecycle
+- `app/routers/tasks.py` — HTTP endpoints
+- `app/schemas/task.py` — Request/response models
+- `app/services/task_service.py` — Business logic
+- `app/models/task.py` — Data representation
+- `app/db/database.py` — Database operations
+- `app/core/config.py` — Configuration
 
-### 4. **Service Layer Pattern**
-See `app/services/task_service.py`:
-- Coordinates between routes and database
-- Handles data transformation
-- Centralizes business logic
-
-### 5. **FastAPI Features**
-See `app/main.py` and `app/routers/tasks.py`:
-- Path parameters and query parameters
-- Request/response models
-- HTTP status codes
-- Dependency injection
-- Lifecycle events (startup/shutdown)
-
-## 🔍 Code Study Guide
-
-### Start Here (in order)
-1. **`app/main.py`** - Understand the app structure and lifecycle
-2. **`app/routers/tasks.py`** - See how routes are defined
-3. **`app/schemas/task.py`** - Learn about Pydantic validation
-4. **`app/services/task_service.py`** - Understand the service layer
-5. **`app/models/task.py`** - See data representation
-6. **`app/db/database.py`** - Learn about database operations
-7. **`app/core/config.py`** - Understand configuration management
-
-### Key Concepts
-
-**Type Hints** - Used throughout for clarity and IDE support
-```python
-def add_task(self, title: str, description: Optional[str] = None) -> int:
-    # Clear about what types are expected and returned
-```
-
-**Pydantic Models** - For validation and serialization
-```python
-class TaskCreate(BaseModel):
-    title: TaskTitle  # Custom validated type
-    priority: TaskPriority = TaskPriority.medium  # Default value
-```
-
-**Error Handling** - Proper HTTP exceptions
-```python
-if not task:
-    raise HTTPException(status_code=404, detail="Task not found")
-```
-
-**Database Connection** - Context manager pattern
-```python
-with Database("db.sqlite") as db:
-    db.create_table()
-    task_id = db.add_task(...)
-```
-
-## 📝 Common Tasks While Learning
+## Common Maintenance Tasks
 
 ### Add a New Field to Tasks
-1. Update `app/db/database.py` - Add to CREATE TABLE
-2. Update `app/models/task.py` - Add to Task class
-3. Update `app/schemas/task.py` - Add to Pydantic models
-4. Update `app/services/task_service.py` - Handle new field
+1. Update `app/db/database.py` — modify CREATE TABLE and migrations
+2. Update `app/models/task.py` — add to data representation
+3. Update `app/schemas/task.py` — add to Pydantic models
+4. Update `app/services/task_service.py` — handle new field
 
 ### Add a New Endpoint
 1. Add method to `TaskService` in `app/services/task_service.py`
-2. Create route in `app/routers/tasks.py`
-3. Add corresponding schema in `app/schemas/task.py`
+2. Add route in `app/routers/tasks.py`
+3. Add/update schema in `app/schemas/task.py`
 
 ### Add Input Validation
 1. Edit `app/schemas/task.py`
-2. Add constraints to fields: `Field(min_length=3, max_length=100)`
-3. Add custom validators: `@field_validator`
+2. Add `Field` constraints and validators as needed
 
 ## 🧪 Testing the API
 
@@ -328,15 +277,13 @@ response = requests.get(f"{BASE_URL}/tasks")
 print(response.json())
 ```
 
-## 📦 Project Structure Benefits
+## Project Benefits
 
-- **Modularity**: Each layer has a single responsibility
-- **Testability**: Easy to test each layer independently
-- **Maintainability**: Changes are localized to specific layers
-- **Scalability**: Easy to add new features following the pattern
-- **Clarity**: Clear separation makes code easy to understand
+- Modularity: Each layer has a single responsibility
+- Testability: Easy to test each layer independently
+- Maintainability: Changes are localized to specific layers
 
-## 🔧 Configuration
+## Configuration
 
 Edit `.env` file to change settings:
 ```
@@ -347,26 +294,12 @@ SECRET_KEY=your-secret-key-here
 DATABASE_URL=app/db/sqlite3.db
 ```
 
-## 📚 Further Learning
+## External References
 
-- **FastAPI Docs**: https://fastapi.tiangolo.com/
-- **Pydantic Docs**: https://docs.pydantic.dev/
-- **SQLite Docs**: https://www.sqlite.org/docs.html
-- **REST API Best Practices**: https://restfulapi.net/
+- FastAPI Docs: https://fastapi.tiangolo.com/
+- Pydantic Docs: https://docs.pydantic.dev/
+- SQLite Docs: https://www.sqlite.org/docs.html
 
-## 🤝 What This Project Teaches
+## License
 
-1. ✅ How to structure a FastAPI application
-2. ✅ Layered architecture pattern
-3. ✅ Data validation with Pydantic
-4. ✅ Database operations and management
-5. ✅ RESTful API design
-6. ✅ Error handling and HTTP status codes
-7. ✅ Configuration management
-8. ✅ Type hints and Python best practices
-9. ✅ API documentation generation
-10. ✅ Service layer pattern
-
-## 📄 License
-
-This project is created for educational purposes.
+Use this project according to your needs. No specific license is declared in this repository.
