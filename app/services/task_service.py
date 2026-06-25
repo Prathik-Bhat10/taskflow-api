@@ -8,7 +8,13 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from app.models.task import Task
 from app.schemas.task import TaskCreate, TaskUpdate, TaskResponse
-from datetime import datetime
+from sqlalchemy import func
+from datetime import datetime, timezone
+import json
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class TaskService:
@@ -33,17 +39,17 @@ class TaskService:
         Returns:
             TaskResponse with created task data
         """
-        tags_str = ",".join(task_create.tags) if task_create.tags else None
+        tags_json = json.dumps(task_create.tags) if task_create.tags else None
 
         task = Task(
             title=task_create.title,
             description=task_create.description,
             status=task_create.status.value,
             priority=task_create.priority.value,
-            due_date=task_create.due_date.isoformat() if task_create.due_date else None,
-            tags=tags_str,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            due_date=task_create.due_date,
+            tags=tags_json,
+            created_at=_now(),
+            updated_at=_now(),
         )
 
         self.session.add(task)
@@ -100,9 +106,28 @@ class TaskService:
 
         return [TaskResponse(**task.to_dict()) for task in tasks]
 
+    async def replace_task(self, task_id: int, task_update: TaskUpdate) -> Optional[TaskResponse]:
+        task = await self.session.get(Task, task_id)
+        if not task:
+            return None
+
+        task.title = task_update.title or task.title  # keep existing if None
+        task.status = (task_update.status.value if task_update.status is not None else task.status)
+        task.priority = (task_update.priority.value if task_update.priority is not None else task.priority)
+        task.description = task_update.description  
+        task.due_date = task_update.due_date
+        task.tags = json.dumps(task_update.tags) if task_update.tags is not None else None
+        task.updated_at = _now()
+
+        self.session.add(task)
+        await self.session.commit()
+        await self.session.refresh(task)
+
+        return TaskResponse(**task.to_dict())
+
     async def update_task(self, task_id: int, task_update: TaskUpdate) -> Optional[TaskResponse]:
         """
-        Update an existing task.
+        Partially update an existing task (PATCH semantics — only provided fields).
 
         Args:
             task_id: ID of the task to update
@@ -124,11 +149,11 @@ class TaskService:
         if task_update.priority is not None:
             task.priority = task_update.priority.value
         if task_update.due_date is not None:
-            task.due_date = task_update.due_date.isoformat()
+            task.due_date = task_update.due_date
         if task_update.tags is not None:
-            task.tags = ",".join(task_update.tags)
+            task.tags = json.dumps(task_update.tags)
 
-        task.updated_at = datetime.utcnow()
+        task.updated_at = _now()
         self.session.add(task)
         await self.session.commit()
         await self.session.refresh(task)
@@ -160,19 +185,19 @@ class TaskService:
         Returns:
             Dictionary with task counts by status
         """
-        result = await self.session.exec(select(Task))
-        all_tasks = result.all()
-
+        result = await self.session.exec(
+            select(Task.status, func.count()).group_by(Task.status)
+        )
         stats = {
-            "total": len(all_tasks),
+            "total": 0,
             "pending": 0,
             "in_progress": 0,
             "done": 0,
         }
 
-        for task in all_tasks:
-            status = task.status
+        for status, count in result:
             if status in stats:
-                stats[status] += 1
+                stats[status] = count
+            stats["total"] += count
 
         return stats

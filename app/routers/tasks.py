@@ -7,29 +7,31 @@ from app.db.database import get_session
 
 router = APIRouter()
 
+SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
-def get_task_service(session: AsyncSession = Depends(get_session)) -> TaskService:
+def get_task_service(session: SessionDep) -> TaskService:
     """Dependency to provide TaskService with a database session."""
     return TaskService(session)
 
+ServiceDep = Annotated[TaskService, Depends(get_task_service)]
 
 @router.get(
     "/stats",
     summary="Get task statistics",
     description="Returns count of tasks by status"
 )
-async def get_task_stats(service: TaskService = Depends(get_task_service)):
+async def get_task_stats(service: ServiceDep):
     """Get statistics about tasks grouped by status."""
     return await service.get_task_stats()
 
 
 @router.get("/", response_model=List[TaskResponse], summary="Get all tasks")
 async def get_all_tasks(
+    service: ServiceDep,
     status: Annotated[Optional[TaskStatus], Query(description="Filter by status")] = None,
     priority: Annotated[Optional[TaskPriority], Query(description="Filter by priority")] = None,
     skip: Annotated[int, Query(ge=0, description="Tasks to skip")] = 0,
-    limit: Annotated[int, Query(ge=1, le=100, description="Max tasks to return")] = 10,
-    service: TaskService = Depends(get_task_service),
+    limit: Annotated[int, Query(ge=1, le=100, description="Max tasks to return")] = 10,  
 ):
     """
     Get all tasks with optional filtering by status and priority.
@@ -52,7 +54,7 @@ async def get_all_tasks(
 @router.get("/{task_id}", response_model=TaskResponse)
 async def get_task(
     task_id: Annotated[int, Path(gt=0, description="Task ID")],
-    service: TaskService = Depends(get_task_service),
+    service: ServiceDep,
 ):
     """
     Get a specific task by ID.
@@ -68,7 +70,7 @@ async def get_task(
 @router.post("/", response_model=TaskResponse, status_code=201)
 async def create_task(
     task: TaskCreate,
-    service: TaskService = Depends(get_task_service),
+    service: ServiceDep,
 ):
     """
     Create a new task.
@@ -87,7 +89,7 @@ async def create_task(
 async def update_task(
     task_id: Annotated[int, Path(gt=0, description="Task ID")],
     updated: TaskUpdate,
-    service: TaskService = Depends(get_task_service),
+    service: ServiceDep,
 ):
     """
     Update an entire task (PUT - all fields).
@@ -95,7 +97,7 @@ async def update_task(
     - **task_id**: The ID of the task to update
     - All fields in the request body are treated as replacements
     """
-    task = await service.update_task(task_id, updated)
+    task = await service.replace_task(task_id, updated)
     if not task:
         raise HTTPException(status_code=404, detail=f"Task with id {task_id} not found")
     return task
@@ -105,7 +107,7 @@ async def update_task(
 async def partial_update_task(
     task_id: Annotated[int, Path(gt=0, description="Task ID")],
     updated: TaskUpdate,
-    service: TaskService = Depends(get_task_service),
+    service: ServiceDep,
 ):
     """
     Partially update a task (PATCH - only provided fields).
@@ -122,7 +124,7 @@ async def partial_update_task(
 @router.delete("/{task_id}", status_code=204)
 async def delete_task(
     task_id: Annotated[int, Path(gt=0, description="Task ID")],
-    service: TaskService = Depends(get_task_service),
+    service: ServiceDep,
 ):
     """
     Delete a task by ID.

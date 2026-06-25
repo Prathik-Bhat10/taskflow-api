@@ -1,5 +1,5 @@
 from typing import Optional, Annotated
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 from enum import Enum
 from datetime import datetime, timezone
 
@@ -87,6 +87,6 @@ class TaskResponse(BaseModel):
     priority: TaskPriority
     due_date: Optional[datetime] = None
     tags: Optional[list[str]] = []
-
-    class Config:
-        from_attributes = True
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True)
