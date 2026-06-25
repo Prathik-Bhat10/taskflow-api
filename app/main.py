@@ -19,7 +19,7 @@ from app.db.database import create_db_and_tables
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Create database tables on startup."""
-    create_db_and_tables()
+    await create_db_and_tables()
     yield
 
 

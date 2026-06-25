@@ -1,23 +1,34 @@
-from sqlmodel import SQLModel, create_engine, Session
+from typing import AsyncGenerator
+from sqlmodel import SQLModel
+from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from app.core.config import settings
 import os
 
-# Create engine with SQLite configuration
-engine = create_engine(
-    settings.database_url,
-    connect_args={"check_same_thread": False},
-    echo=False,
+# Create engine with PostgreSQL configuration
+engine = create_async_engine(
+    settings.POSTGRES_URL,
+    echo=True
+)
+
+# Create session factory
+async_session_maker = async_sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
 )
 
 
-def create_db_and_tables() -> None:
+async def create_db_and_tables() -> None:
     """Create database tables."""
-    SQLModel.metadata.create_all(engine)
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
 
 
-def get_session() -> Session:
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """Get a database session."""
-    return Session(engine)
+    async with async_session_maker() as session:
+        yield session
 
 
 class Database:
@@ -25,27 +36,27 @@ class Database:
 
     def __init__(self):
         """Initialize database instance."""
-        self.db_url = settings.database_url
+        self.db_url = settings.POSTGRES_URL
         self.engine = engine
 
-    def connect(self) -> None:
+    async def connect(self) -> None:
         """Establish database connection and create tables."""
         os.makedirs("app/db", exist_ok=True)
-        create_db_and_tables()
+        await create_db_and_tables()
 
-    def close(self) -> None:
+    async def close(self) -> None:
         """Close database connection."""
         if self.engine:
-            self.engine.dispose()
+            await self.engine.dispose()
 
-    def __enter__(self):
+    async def __aenter__(self):
         """Context manager entry."""
-        self.connect()
+        await self.connect()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit."""
-        self.close()
+        await self.close()
 
 
 # Shared database instance used across the app

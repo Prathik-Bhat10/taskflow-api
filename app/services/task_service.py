@@ -4,7 +4,8 @@ This layer handles all task-related operations and acts as an intermediary
 between the routers and the database.
 """
 from typing import List, Optional
-from sqlmodel import Session, select
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 from app.models.task import Task
 from app.schemas.task import TaskCreate, TaskUpdate, TaskResponse
 from datetime import datetime
@@ -13,16 +14,16 @@ from datetime import datetime
 class TaskService:
     """Service class for task operations."""
 
-    def __init__(self, session: Session):
+    def __init__(self, session: AsyncSession):
         """
         Initialize TaskService with a database session.
 
         Args:
-            session: SQLAlchemy Session instance
+            session: SQLAlchemy AsyncSession instance
         """
         self.session = session
 
-    def create_task(self, task_create: TaskCreate) -> TaskResponse:
+    async def create_task(self, task_create: TaskCreate) -> TaskResponse:
         """
         Create a new task in the database.
 
@@ -46,12 +47,12 @@ class TaskService:
         )
 
         self.session.add(task)
-        self.session.commit()
-        self.session.refresh(task)
+        await self.session.commit()
+        await self.session.refresh(task)
 
         return TaskResponse(**task.to_dict())
 
-    def get_task(self, task_id: int) -> Optional[TaskResponse]:
+    async def get_task(self, task_id: int) -> Optional[TaskResponse]:
         """
         Retrieve a specific task by ID.
 
@@ -61,13 +62,13 @@ class TaskService:
         Returns:
             TaskResponse if found, None otherwise
         """
-        task = self.session.get(Task, task_id)
+        task = await self.session.get(Task, task_id)
         if not task:
             return None
 
         return TaskResponse(**task.to_dict())
 
-    def get_all_tasks(
+    async def get_all_tasks(
         self,
         status: Optional[str] = None,
         priority: Optional[str] = None,
@@ -94,11 +95,12 @@ class TaskService:
             query = query.where(Task.priority == priority)
 
         query = query.offset(skip).limit(limit)
-        tasks = self.session.exec(query).all()
+        result = await self.session.exec(query)
+        tasks = result.all()
 
         return [TaskResponse(**task.to_dict()) for task in tasks]
 
-    def update_task(self, task_id: int, task_update: TaskUpdate) -> Optional[TaskResponse]:
+    async def update_task(self, task_id: int, task_update: TaskUpdate) -> Optional[TaskResponse]:
         """
         Update an existing task.
 
@@ -109,7 +111,7 @@ class TaskService:
         Returns:
             Updated TaskResponse if successful, None if task not found
         """
-        task = self.session.get(Task, task_id)
+        task = await self.session.get(Task, task_id)
         if not task:
             return None
 
@@ -128,12 +130,12 @@ class TaskService:
 
         task.updated_at = datetime.utcnow()
         self.session.add(task)
-        self.session.commit()
-        self.session.refresh(task)
+        await self.session.commit()
+        await self.session.refresh(task)
 
         return TaskResponse(**task.to_dict())
 
-    def delete_task(self, task_id: int) -> bool:
+    async def delete_task(self, task_id: int) -> bool:
         """
         Delete a task by ID.
 
@@ -143,22 +145,23 @@ class TaskService:
         Returns:
             True if deleted, False if not found
         """
-        task = self.session.get(Task, task_id)
+        task = await self.session.get(Task, task_id)
         if not task:
             return False
 
-        self.session.delete(task)
-        self.session.commit()
+        await self.session.delete(task)
+        await self.session.commit()
         return True
 
-    def get_task_stats(self) -> dict:
+    async def get_task_stats(self) -> dict:
         """
         Get statistics about tasks grouped by status.
 
         Returns:
             Dictionary with task counts by status
         """
-        all_tasks = self.session.exec(select(Task)).all()
+        result = await self.session.exec(select(Task))
+        all_tasks = result.all()
 
         stats = {
             "total": len(all_tasks),
