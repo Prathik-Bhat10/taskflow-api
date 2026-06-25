@@ -77,6 +77,12 @@ class TaskUpdate(BaseModel):
         if v is not None and v.strip() == "":
             raise ValueError("Title cannot be blank or just spaces")
         return v.strip() if v else v
+    
+    @model_validator(mode="after")
+    def high_priority_needs_due_date(self):
+        if self.priority == TaskPriority.high and self.due_date is None:
+            raise ValueError("High priority tasks must have a due date")
+        return self
 
 
 class TaskResponse(BaseModel):

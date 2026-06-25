@@ -3,7 +3,6 @@ from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from app.core.config import settings
-import os
 
 # Create engine with PostgreSQL configuration
 engine = create_async_engine(
@@ -41,7 +40,6 @@ class Database:
 
     async def connect(self) -> None:
         """Establish database connection and create tables."""
-        os.makedirs("app/db", exist_ok=True)
         await create_db_and_tables()
 
     async def close(self) -> None:

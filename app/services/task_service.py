@@ -39,7 +39,7 @@ class TaskService:
         Returns:
             TaskResponse with created task data
         """
-        tags_json = json.dumps(task_create.tags) if task_create.tags else None
+        tags_json = json.dumps(task_create.tags) if task_create.tags is not None else None
 
         task = Task(
             title=task_create.title,
