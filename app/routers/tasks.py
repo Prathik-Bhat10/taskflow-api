@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Path, Query, Depends
 from typing import Annotated, Optional, List
 from sqlmodel.ext.asyncio.session import AsyncSession
-from app.schemas.task import TaskCreate, TaskUpdate, TaskResponse, TaskStatus, TaskPriority
+from app.schemas.task import TaskCreate, TaskUpdate, TaskResponse, TaskStatus, TaskPriority ,TaskStatsResponse
 from app.services.task_service import TaskService
 from app.db.database import get_session
 
@@ -17,8 +17,10 @@ ServiceDep = Annotated[TaskService, Depends(get_task_service)]
 
 @router.get(
     "/stats",
+    response_model=TaskStatsResponse,
     summary="Get task statistics",
-    description="Returns count of tasks by status"
+    description="Returns count of tasks by status",
+    
 )
 async def get_task_stats(service: ServiceDep):
     """Get statistics about tasks grouped by status."""

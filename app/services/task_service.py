@@ -9,12 +9,11 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.models.task import Task
 from app.schemas.task import TaskCreate, TaskUpdate, TaskResponse
 from sqlalchemy import func
-from datetime import datetime, timezone
+from app.core.utils import _now
 import json
 
 
-def _now() -> datetime:
-    return datetime.now(timezone.utc)
+
 
 
 class TaskService:

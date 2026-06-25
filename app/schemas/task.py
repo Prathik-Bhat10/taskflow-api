@@ -101,3 +101,9 @@ class TaskResponse(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
+    
+class TaskStatsResponse(BaseModel):
+    total: int
+    pending: int
+    in_progress: int
+    done: int

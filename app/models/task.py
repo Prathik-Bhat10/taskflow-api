@@ -4,12 +4,10 @@ SQLModel combines SQLAlchemy ORM with Pydantic validation.
 """
 from sqlmodel import SQLModel, Field
 from typing import Optional
-from datetime import datetime, timezone
+from datetime import datetime
+from app.core.utils import _now
 import json
  
-def _now() -> datetime:
-    return datetime.now(timezone.utc)
-
 
 class Task(SQLModel, table=True):
     """Task model representing a task record in the database."""

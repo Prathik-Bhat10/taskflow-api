@@ -6,7 +6,7 @@ A RESTful API for task management with the following features:
 - Task filtering by status and priority
 - Task statistics
 - Validation and error handling
-- SQLite database integration with SQLModel
+- PostgreSQL database integration with SQLModel
 """
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
